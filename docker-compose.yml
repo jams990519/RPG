@@ -1,0 +1,36 @@
+services:
+  bot:
+    build: .
+    container_name: telegram-game-bot
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      # La base SQLite vive en el volumen para sobrevivir a los redespliegues.
+      DATABASE_URL: sqlite:///data/bot_database.db
+      LOG_FILE: data/bot.log
+    volumes:
+      - bot_data:/app/data
+
+  # Alternativa a SQLite. Levántalo con:
+  #   docker compose --profile postgres up -d
+  # y pon en .env: DATABASE_URL=postgresql://bot:bot@db:5432/bot_db
+  db:
+    image: postgres:16-alpine
+    container_name: telegram-game-db
+    profiles: ["postgres"]
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: bot
+      POSTGRES_PASSWORD: bot
+      POSTGRES_DB: bot_db
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U bot -d bot_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  bot_data:
+  pg_data:
